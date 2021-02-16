@@ -11,12 +11,18 @@
 // prepend with `https://image.tmdb.org/t/p/w500/` to get the 
 // complete image URL
 
+let db = firebase.firestore()
+
 window.addEventListener('DOMContentLoaded', async function(event) {
   // Step 1: Construct a URL to get movies playing now from TMDB, fetch
   // data and put the Array of movie Objects in a variable called
   // movies. Write the contents of this array to the JavaScript
   // console to ensure you've got good data
   // ⬇️ ⬇️ ⬇️
+
+  let response = await fetch('https://api.themoviedb.org/3/movie/now_playing?api_key=00e4abbbae5df884c2d20c1d1dff4ae3&language=en-US')
+  let movies = await response.json()
+  let movieResults = movies.results
 
   // ⬆️ ⬆️ ⬆️ 
   // End Step 1
@@ -34,6 +40,76 @@ window.addEventListener('DOMContentLoaded', async function(event) {
   // </div>
   // ⬇️ ⬇️ ⬇️
 
+  for (let i=0; i<movieResults.length; i++){
+    let movieID = movieResults[i].id
+    let image = movieResults[i].poster_path
+
+    let querySnapshot = await db.collection('watchlist').where("id","==","m" + movieID).get()
+    let movies = querySnapshot.docs
+    let seenMovie = true
+
+    if(movies.length > 0){
+      let movieData = movies[0].data()
+      seenMovie = movieData.watched
+    }
+    else{
+      seenMovie = false
+    }
+    
+
+    if(seenMovie){
+      document.querySelector('.movies').insertAdjacentHTML('beforeend', `<div class=" w-1/5 p-4">
+      <img id="i${movieID}" src="https://image.tmdb.org/t/p/w500/${image}" class="opacity-20 poster w-full">
+      <a id="m${movieID}" class="opacity-20 movies-${movieID}.watched-button block text-center text-white bg-green-500 mt-4 px-4 py-2 rounded">Watched</a>
+      </div>`
+      ) 
+    }
+    else{
+  
+    document.querySelector('.movies').insertAdjacentHTML('beforeend', `<div class=" w-1/5 p-4">
+    <img id="i${movieID}" src="https://image.tmdb.org/t/p/w500/${image}" class="poster w-full">
+    <a id="m${movieID}" class="movies-${movieID}.watched-button block text-center text-white bg-green-500 mt-4 px-4 py-2 rounded">Watched</a>
+    </div>`
+    ) 
+    }
+      
+      document.querySelector(`#m${movieID}`).addEventListener('click', async function(event) {
+         event.preventDefault()
+
+         
+         let querySnapshot = await db.collection('watchlist').where("id","==","m" + movieID).get()
+         let movies = querySnapshot.docs
+
+         if(movies.length == 0){
+          document.querySelector(`#m${movieID}`).classList.add('opacity-20')
+          document.querySelector(`#i${movieID}`).classList.add('opacity-20') 
+          db.collection('watchlist').add({
+            id: "m" + movieID,
+            watched: true
+          })
+         }
+  
+         else{
+           console.log("update")
+          let movieId = movies[0].id
+          let movieData = movies[0].data()
+           if(movieData.watched){
+            console.log("seen")
+            await db.collection('watchlist').doc(movieId).update({ watched: false })
+            document.querySelector(`#m${movieID}`).classList.remove('opacity-20')
+            document.querySelector(`#i${movieID}`).classList.remove('opacity-20')   
+           }
+           else{
+            await db.collection('watchlist').doc(movieId).update({ watched: true })
+            document.querySelector(`#m${movieID}`).classList.add('opacity-20')
+            document.querySelector(`#i${movieID}`).classList.add('opacity-20')   
+           }
+         }
+       
+      })
+    }
+  })
+    
   // ⬆️ ⬆️ ⬆️ 
   // End Step 2
 
@@ -48,6 +124,7 @@ window.addEventListener('DOMContentLoaded', async function(event) {
   //   the movie is watched. Use .classList.remove('opacity-20')
   //   to remove the class if the element already contains it.
   // ⬇️ ⬇️ ⬇️
+
 
   // ⬆️ ⬆️ ⬆️ 
   // End Step 3
@@ -69,4 +146,11 @@ window.addEventListener('DOMContentLoaded', async function(event) {
   //   database.
   // - Hint: you can use if (document) with no comparison
   //   operator to test for the existence of an object.
-})
+
+    // let querySnapshot = await db.collection('watchlist').get()
+  // let watched = querySnapshot.docs
+  // for (let j=0; j < watched.length; j++){
+  //     let watched = watched[j].data()
+  //     watched.name
+  //   }
+  //   })
